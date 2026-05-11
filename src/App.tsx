@@ -176,10 +176,6 @@ export default function App() {
     <div className="app-shell">
       <header className="topbar">
         <button className="brand" onClick={() => setView('app')}><Clapperboard /> VideoFlow</button>
-        <nav>
-          <button onClick={() => setView('app')}>工作台</button>
-          {user?.role === 'admin' && <button onClick={() => setView('admin')}>后台</button>}
-        </nav>
         <div className="user-box">
           {user ? <><UserRound size={18} />{user.name}<button title="修改密码" onClick={() => { setView('app'); window.setTimeout(() => document.getElementById('password-settings')?.scrollIntoView({ behavior: 'smooth' }), 0); }}><KeyRound size={16} /></button><button onClick={logout}><LogOut size={16} /></button></> : <button onClick={() => setView('app')}>登录</button>}
         </div>
