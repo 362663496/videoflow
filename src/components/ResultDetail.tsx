@@ -1,14 +1,16 @@
-import { Copy, Film, Mic2, Sparkles } from 'lucide-react';
+import { ArrowLeft, Copy, Download, Film, Mic2, Sparkles } from 'lucide-react';
 import type { VideoJob } from '../lib/types';
 
-export function ResultDetail({ job }: { job: VideoJob }) {
+export function ResultDetail({ job, onBack }: { job: VideoJob; onBack?: () => void }) {
   const result = job.result;
   if (!result) return null;
   return (
     <section className="detail-grid">
       <div className="result-main card">
+        {onBack && <button className="mini-button back-button" onClick={onBack}><ArrowLeft size={16} />返回</button>}
         <p className="eyebrow">生成结果</p>
         <h2>{job.title}</h2>
+        {job.fileUrl && <a className="mini-button result-download" href={job.fileUrl} download><Download size={16} />下载原视频</a>}
         <p>{result.summary}</p>
         <div className="tag-row">{result.styleTags.map((tag) => <span key={tag}>{tag}</span>)}</div>
         <div className="markdown-box">

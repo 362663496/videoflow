@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import type { AiProviderConfig, AiProviderInput, User, VideoJob } from '../src/lib/types';
 
@@ -79,6 +79,14 @@ function writeDb(db: DbShape) {
   writeFileSync(dbPath, JSON.stringify(db, null, 2));
 }
 
+function removePathIfSafe(targetPath: string | undefined, allowedRoot: string) {
+  if (!targetPath) return;
+  const root = path.resolve(allowedRoot);
+  const resolved = path.resolve(targetPath);
+  if (!resolved.startsWith(`${root}${path.sep}`) && resolved !== root) return;
+  if (existsSync(resolved)) rmSync(resolved, { recursive: true, force: true });
+}
+
 const publicUser = (storedUser: StoredUser): User => {
   const { id, name, email, role, createdAt } = storedUser;
   return { id, name, email, role, createdAt };
@@ -145,6 +153,18 @@ export const store = {
     if (index >= 0) db.jobs[index] = job;
     else db.jobs.unshift(job);
     writeDb(db);
+    return job;
+  },
+  deleteJob(id: string) {
+    const db = readDb();
+    const index = db.jobs.findIndex((item) => item.id === id);
+    if (index < 0) return undefined;
+    const [job] = db.jobs.splice(index, 1);
+    writeDb(db);
+    const uploadRoot = path.resolve(process.cwd(), 'server/uploads');
+    const outputRoot = path.resolve(process.cwd(), 'server/outputs');
+    removePathIfSafe(job.sourcePath, uploadRoot);
+    removePathIfSafe(path.join(outputRoot, job.id), outputRoot);
     return job;
   },
   listProviders() {

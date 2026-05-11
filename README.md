@@ -24,12 +24,13 @@ OPENAI_API_KEY=sk-...
 OPENAI_BASE_URL=https://api.openai.com/v1
 OPENAI_SCRIPT_MODEL=gpt-4.1
 OPENAI_TRANSCRIBE_MODEL=gpt-4o-transcribe
+VIDEOFLOW_ALLOW_REGISTRATION=false
 ```
 
 首次启动后，管理员也可以在后台的 **AI Provider** 面板配置：
 
 - Provider 名称
-- Base URL，例如官方地址或第三方 OpenAI 兼容中转站
+- Base URL，例如官方地址或第三方 OpenAI 兼容中转站。第三方 New API/中转站通常要填写 OpenAI 兼容接口地址（常见为 `https://域名/v1`），不要填写控制台网页首页。
 - API Key
 - 脚本生成模型
 - 转写模型
@@ -56,7 +57,8 @@ docker compose up -d --build
 访问：
 
 ```text
-http://localhost:8787
+http://localhost:8787        # 工作台
+http://localhost:8787/admin  # 管理后台
 ```
 
 持久化卷：

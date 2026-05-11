@@ -17,7 +17,10 @@ mkdirSync(uploadDir, { recursive: true });
 const upload = multer({
   storage: multer.diskStorage({
     destination: uploadDir,
-    filename: (_req, file, cb) => cb(null, `${Date.now()}-${crypto.randomUUID()}-${file.originalname}`)
+    filename: (_req, file, cb) => {
+      const extension = path.extname(file.originalname);
+      cb(null, `${Date.now()}-${crypto.randomUUID()}${extension}`);
+    }
   }),
   limits: { fileSize: 500 * 1024 * 1024 }
 });
@@ -65,6 +68,9 @@ const providerSchema = z.object({
 app.get('/api/health', (_req, res) => res.json({ ok: true, name: 'videoflow-api' }));
 
 app.post('/api/auth/register', (req, res) => {
+  if (process.env.VIDEOFLOW_ALLOW_REGISTRATION !== 'true') {
+    return res.status(403).json({ error: '账号注册已关闭，请联系管理员开通账号' });
+  }
   const parsed = registerSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: '注册信息不完整' });
   try {
@@ -117,6 +123,15 @@ app.get('/api/jobs/:id', auth, (req, res) => {
   if (!job) return res.status(404).json({ error: '任务不存在' });
   if (req.user!.role !== 'admin' && job.userId !== req.user!.id) return res.status(403).json({ error: '无权查看该任务' });
   res.json({ job });
+});
+
+app.delete('/api/jobs/:id', auth, (req, res) => {
+  const jobId = String(req.params.id);
+  const job = store.getJob(jobId);
+  if (!job) return res.status(404).json({ error: '任务不存在' });
+  if (req.user!.role !== 'admin' && job.userId !== req.user!.id) return res.status(403).json({ error: '无权删除该任务' });
+  const deleted = store.deleteJob(jobId);
+  res.json({ job: deleted });
 });
 
 app.post('/api/jobs/:id/retry', auth, adminOnly, (req, res) => {

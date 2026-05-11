@@ -61,6 +61,48 @@ function activeProvider(): Required<Pick<AiProviderConfig, 'baseUrl' | 'scriptMo
   };
 }
 
+
+function errorText(error: unknown) {
+  if (error instanceof Error) {
+    const cause = (error as Error & { cause?: unknown }).cause;
+    return [error.message, cause instanceof Error ? cause.message : typeof cause === 'string' ? cause : ''].filter(Boolean).join('\n');
+  }
+  if (typeof error === 'string') return error;
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return '';
+  }
+}
+
+function providerErrorMessage(error: unknown, provider: Pick<AiProviderConfig, 'name' | 'baseUrl'>) {
+  const text = errorText(error);
+  const lower = text.toLowerCase();
+  const returnedHtml = lower.includes('<!doctype html') || lower.includes('<html') || lower.includes('text/html');
+  const sdkHtmlParseFailure = lower.includes("cannot use 'in' operator") || lower.includes('search for') && lower.includes('<!doctype html');
+  if (returnedHtml || sdkHtmlParseFailure) {
+    return `AI Provider「${provider.name}」返回了 HTML 页面。请在后台检查 base_url 是否填写 OpenAI 兼容接口地址，通常应以 /v1 结尾，不要填写中转站控制台或网页首页。当前 base_url：${provider.baseUrl}`;
+  }
+  if (lower.includes('401') || lower.includes('unauthorized') || lower.includes('invalid api key')) {
+    return `AI Provider「${provider.name}」认证失败，请检查 api_key 是否有效。`;
+  }
+  if (lower.includes('404') || lower.includes('not found')) {
+    return `AI Provider「${provider.name}」接口或模型不存在，请检查 base_url、转写模型和脚本模型配置。`;
+  }
+  if (lower.includes('timeout') || lower.includes('etimedout') || lower.includes('econnreset') || lower.includes('fetch failed')) {
+    return `AI Provider「${provider.name}」连接失败，请检查 base_url 网络连通性和中转站服务状态。`;
+  }
+  return text || 'AI Provider 调用失败';
+}
+
+async function withProviderErrors<T>(provider: Pick<AiProviderConfig, 'name' | 'baseUrl'>, action: () => Promise<T>): Promise<T> {
+  try {
+    return await action();
+  } catch (error) {
+    throw new Error(providerErrorMessage(error, provider), { cause: error });
+  }
+}
+
 async function ensureFfmpeg() {
   await execFileAsync('ffmpeg', ['-version']);
   await execFileAsync('ffprobe', ['-version']);
@@ -210,9 +252,9 @@ export async function generateVideoScriptResult(options: GenerateVideoScriptOpti
   options.onStage('context');
   const context = await prepareContext(options.sourcePath, options.jobId);
   options.onStage('transcribe');
-  const transcript = await transcribeAudio(client, provider.transcribeModel, context.audioPath);
+  const transcript = await withProviderErrors(provider, () => transcribeAudio(client, provider.transcribeModel, context.audioPath));
   options.onStage('vision');
-  const result = await analyzeVideo(client, provider.scriptModel, options.title, context, transcript);
+  const result = await withProviderErrors(provider, () => analyzeVideo(client, provider.scriptModel, options.title, context, transcript));
   options.onStage('write');
   await persistArtifacts(context.outputDir, result);
   options.onStage('review');

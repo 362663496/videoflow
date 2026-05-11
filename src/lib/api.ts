@@ -22,7 +22,10 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     headers.set('Content-Type', 'application/json');
   }
   const response = await fetch(path, { ...init, headers });
-  const data = (await response.json().catch(() => ({}))) as T & { error?: string };
+  const contentType = response.headers.get('content-type') || '';
+  const data = contentType.includes('application/json')
+    ? ((await response.json().catch(() => ({}))) as T & { error?: string })
+    : ({ error: await response.text().catch(() => '') } as T & { error?: string });
   if (!response.ok) throw new Error(data.error || '请求失败');
   return data;
 }
@@ -54,6 +57,9 @@ export const api = {
     form.set('title', title);
     form.set('video', file);
     return request<{ job: VideoJob }>('/api/jobs', { method: 'POST', body: form });
+  },
+  deleteJob(id: string) {
+    return request<{ job: VideoJob }>(`/api/jobs/${id}`, { method: 'DELETE' });
   },
   retryJob(id: string) {
     return request<{ job: VideoJob }>(`/api/jobs/${id}/retry`, { method: 'POST' });
