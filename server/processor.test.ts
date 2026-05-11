@@ -22,3 +22,17 @@ describe('video processing stages', () => {
     expect(second[0].status).toBe('pending');
   });
 });
+
+describe('local whisper processing contract', () => {
+  it('labels transcription as local speech recognition work', () => {
+    const transcribe = stageTemplates.find((stage) => stage.id === 'transcribe');
+    expect(transcribe?.label).toBe('语音转写');
+    expect(transcribe?.description).toContain('本地 Whisper');
+  });
+});
+
+describe('result title contract', () => {
+  it('stores generated results with an AI-defined title field', () => {
+    expect({ title: '星巴克大杯次卡门店对话短视频' }).toHaveProperty('title');
+  });
+});

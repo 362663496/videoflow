@@ -17,7 +17,7 @@ export function UploadPanel({ onCreated }: { onCreated: (job: VideoJob) => void 
     setBusy(true);
     setError('');
     try {
-      const { job } = await api.createJob(title || file.name.replace(/\.[^.]+$/, ''), file);
+      const { job } = await api.createJob(title, file);
       onCreated(job);
       setTitle('');
       setFile(null);
@@ -37,7 +37,7 @@ export function UploadPanel({ onCreated }: { onCreated: (job: VideoJob) => void 
       </div>
       <div className="drop-zone">
         <UploadCloud size={40} />
-        <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="视频标题" />
+        <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="视频标题（可选，AI 会根据内容重命名）" />
         <label>
           <span>{file ? file.name : '选择视频文件'}</span>
           <input type="file" accept="video/*" onChange={(event) => setFile(event.target.files?.[0] ?? null)} />

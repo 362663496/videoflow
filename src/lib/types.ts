@@ -5,6 +5,8 @@ export interface User {
   name: string;
   email: string;
   role: Role;
+  disabled?: boolean;
+  disabledAt?: string;
   createdAt: string;
 }
 
@@ -35,6 +37,7 @@ export interface Shot {
 }
 
 export interface VideoResult {
+  title: string;
   summary: string;
   styleTags: string[];
   transcript: Array<{ time: string; text: string }>;
@@ -62,6 +65,18 @@ export interface VideoJob {
   updatedAt: string;
 }
 
+export interface JobArtifactFile {
+  name: string;
+  url: string;
+  relativePath: string;
+  timestampSeconds?: number;
+}
+
+export interface JobArtifacts {
+  frames: JobArtifactFile[];
+  markdown: JobArtifactFile[];
+  audio?: JobArtifactFile;
+}
 
 export interface AiProviderConfig {
   id: string;
@@ -69,7 +84,6 @@ export interface AiProviderConfig {
   baseUrl: string;
   apiKey?: string;
   scriptModel: string;
-  transcribeModel: string;
   enabled: boolean;
   createdAt: string;
   updatedAt: string;
@@ -80,7 +94,6 @@ export interface AiProviderInput {
   baseUrl: string;
   apiKey: string;
   scriptModel: string;
-  transcribeModel: string;
   enabled: boolean;
 }
 

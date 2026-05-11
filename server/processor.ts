@@ -5,7 +5,7 @@ import { store } from './store';
 export const stageTemplates: ProcessingStage[] = [
   { id: 'queued', label: '任务受理', description: '视频已进入处理队列', progress: 5, status: 'pending' },
   { id: 'context', label: '解析素材', description: '提取视频元数据、代表帧与音频轨道', progress: 18, status: 'pending' },
-  { id: 'transcribe', label: '语音转写', description: '识别口播、对白与可用字幕线索', progress: 38, status: 'pending' },
+  { id: 'transcribe', label: '语音转写', description: '本地 Whisper 识别口播、对白与可用字幕线索', progress: 38, status: 'pending' },
   { id: 'vision', label: '画面分析', description: '分析镜头、画面信息与叙事节奏', progress: 62, status: 'pending' },
   { id: 'write', label: '生成提词', description: '生成完整剧本与分镜剧本', progress: 84, status: 'pending' },
   { id: 'review', label: '结果校验', description: '校验结构、证据边界与交付完整度', progress: 96, status: 'pending' },
@@ -54,7 +54,7 @@ export async function runVideoJob(jobId: string) {
     if (!job.sourcePath) throw new Error('视频源文件不存在');
     const result = await generateVideoScriptResult({
       jobId,
-      title: job.title,
+      userTitle: job.title,
       sourcePath: job.sourcePath,
       onStage(stage) {
         const latest = store.getJob(jobId);
@@ -62,7 +62,7 @@ export async function runVideoJob(jobId: string) {
       }
     });
     job = store.getJob(jobId) ?? job;
-    const complete = setStage({ ...job, result }, 'complete', 'complete');
+    const complete = setStage({ ...job, title: result.title || job.title, result }, 'complete', 'complete');
     store.saveJob({
       ...complete,
       stages: complete.stages.map((stage) => ({ ...stage, status: 'done' })),

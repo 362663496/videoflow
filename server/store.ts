@@ -29,6 +29,7 @@ const seed: DbShape = {
       email: process.env.VIDEOFLOW_ADMIN_EMAIL || 'admin@videoflow.local',
       password: process.env.VIDEOFLOW_ADMIN_PASSWORD || crypto.randomUUID(),
       role: 'admin',
+      disabled: false,
       createdAt: now()
     }
   ],
@@ -42,7 +43,6 @@ const seed: DbShape = {
           baseUrl: process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1',
           apiKey: process.env.OPENAI_API_KEY,
           scriptModel: process.env.OPENAI_SCRIPT_MODEL || 'gpt-4.1',
-          transcribeModel: process.env.OPENAI_TRANSCRIBE_MODEL || 'gpt-4o-transcribe',
           enabled: true,
           createdAt: now(),
           updatedAt: now()
@@ -51,12 +51,21 @@ const seed: DbShape = {
     : []
 };
 
+function normalizeProvider(provider: StoredAiProvider): StoredAiProvider {
+  const { id, name, baseUrl, apiKey, scriptModel, enabled, createdAt, updatedAt } = provider;
+  return { id, name, baseUrl, apiKey, scriptModel, enabled, createdAt, updatedAt };
+}
+
+function normalizeUser(user: StoredUser): StoredUser {
+  return { ...user, disabled: Boolean(user.disabled) };
+}
+
 function normalizeDb(value: Partial<DbShape>): DbShape {
   return {
-    users: value.users ?? seed.users,
+    users: (value.users ?? seed.users).map(normalizeUser),
     sessions: value.sessions ?? {},
     jobs: value.jobs ?? [],
-    providers: value.providers ?? seed.providers
+    providers: (value.providers ?? seed.providers).map(normalizeProvider)
   };
 }
 
@@ -88,8 +97,8 @@ function removePathIfSafe(targetPath: string | undefined, allowedRoot: string) {
 }
 
 const publicUser = (storedUser: StoredUser): User => {
-  const { id, name, email, role, createdAt } = storedUser;
-  return { id, name, email, role, createdAt };
+  const { id, name, email, role, disabled, disabledAt, createdAt } = storedUser;
+  return { id, name, email, role, disabled: Boolean(disabled), disabledAt, createdAt };
 };
 
 const maskKey = (value: string) => (value ? `${value.slice(0, 4)}••••${value.slice(-4)}` : '');
@@ -119,6 +128,7 @@ export const store = {
       email: input.email,
       password: input.password,
       role: 'user',
+      disabled: false,
       createdAt: now()
     };
     db.users.push(user);
@@ -138,10 +148,32 @@ export const store = {
     const db = readDb();
     const userId = db.sessions[token];
     const user = userId ? db.users.find((item) => item.id === userId) : undefined;
-    return user ? publicUser(user) : undefined;
+    return user && !user.disabled ? publicUser(user) : undefined;
   },
   listUsers() {
     return readDb().users.map(publicUser);
+  },
+  updatePassword(userId: string, currentPassword: string, newPassword: string) {
+    const db = readDb();
+    const user = db.users.find((item) => item.id === userId);
+    if (!user) throw new Error('用户不存在');
+    if (user.password !== currentPassword) throw new Error('当前密码错误');
+    user.password = newPassword;
+    writeDb(db);
+    return publicUser(user);
+  },
+  setUserDisabled(userId: string, disabled: boolean) {
+    const db = readDb();
+    const user = db.users.find((item) => item.id === userId);
+    if (!user) throw new Error('用户不存在');
+    if (user.role === 'admin') throw new Error('不能禁用管理员账号');
+    user.disabled = disabled;
+    user.disabledAt = disabled ? now() : undefined;
+    for (const [token, sessionUserId] of Object.entries(db.sessions)) {
+      if (sessionUserId === userId) delete db.sessions[token];
+    }
+    writeDb(db);
+    return publicUser(user);
   },
   listJobs(userId?: string) {
     const jobs = readDb().jobs;
@@ -186,7 +218,6 @@ export const store = {
       baseUrl: normalizeBaseUrl(input.baseUrl),
       apiKey: input.apiKey.trim() || existing?.apiKey || '',
       scriptModel: input.scriptModel.trim(),
-      transcribeModel: input.transcribeModel.trim(),
       enabled: input.enabled,
       createdAt: existing?.createdAt ?? timestamp,
       updatedAt: timestamp
@@ -201,9 +232,12 @@ export const store = {
     const db = readDb();
     return {
       users: db.users.length,
+      disabledUsers: db.users.filter((user) => user.disabled).length,
       jobs: db.jobs.length,
       completed: db.jobs.filter((job) => job.status === 'complete').length,
-      processing: db.jobs.filter((job) => job.status === 'processing' || job.status === 'queued').length
+      processing: db.jobs.filter((job) => job.status === 'processing' || job.status === 'queued').length,
+      failed: db.jobs.filter((job) => job.status === 'failed').length,
+      providerConfigured: db.providers.some((provider) => provider.enabled && Boolean(provider.apiKey))
     };
   }
 };

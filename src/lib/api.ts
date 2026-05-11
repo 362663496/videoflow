@@ -1,4 +1,4 @@
-import type { AiProviderConfig, AiProviderInput, SessionPayload, User, VideoJob } from './types';
+import type { AiProviderConfig, AiProviderInput, JobArtifacts, SessionPayload, User, VideoJob } from './types';
 
 const TOKEN_KEY = 'videoflow_token';
 
@@ -46,11 +46,20 @@ export const api = {
   me() {
     return request<{ user: User }>('/api/auth/me');
   },
+  changePassword(currentPassword: string, newPassword: string) {
+    return request<{ user: User }>('/api/auth/password', {
+      method: 'PUT',
+      body: JSON.stringify({ currentPassword, newPassword })
+    });
+  },
   listJobs(scope?: 'all') {
     return request<{ jobs: VideoJob[] }>(`/api/jobs${scope ? '?scope=all' : ''}`);
   },
   getJob(id: string) {
     return request<{ job: VideoJob }>(`/api/jobs/${id}`);
+  },
+  getJobArtifacts(id: string) {
+    return request<{ artifacts: JobArtifacts }>(`/api/jobs/${id}/artifacts`);
   },
   createJob(title: string, file: File) {
     const form = new FormData();
@@ -65,10 +74,16 @@ export const api = {
     return request<{ job: VideoJob }>(`/api/jobs/${id}/retry`, { method: 'POST' });
   },
   stats() {
-    return request<{ stats: { users: number; jobs: number; completed: number; processing: number } }>('/api/admin/stats');
+    return request<{ stats: { users: number; disabledUsers: number; jobs: number; completed: number; processing: number; failed: number; providerConfigured: boolean } }>('/api/admin/stats');
   },
   listUsers() {
     return request<{ users: User[] }>('/api/admin/users');
+  },
+  setUserDisabled(id: string, disabled: boolean) {
+    return request<{ user: User }>(`/api/admin/users/${id}/disabled`, {
+      method: 'PUT',
+      body: JSON.stringify({ disabled })
+    });
   },
   listProviders() {
     return request<{ providers: AiProviderConfig[] }>('/api/admin/providers');

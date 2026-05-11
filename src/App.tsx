@@ -1,5 +1,6 @@
-import { ArrowRight, Clapperboard, Download, Eye, LayoutDashboard, LogOut, PlayCircle, Settings, ShieldCheck, Trash2, UserRound, Users } from 'lucide-react';
+import { ArrowRight, Ban, CheckCircle2, Clapperboard, Download, Eye, KeyRound, LayoutDashboard, LogOut, PlayCircle, Settings, ShieldCheck, Trash2, UserRound, Users } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import { PasswordSettings } from './components/PasswordSettings';
 import { ProviderSettings } from './components/ProviderSettings';
 import { ResultDetail } from './components/ResultDetail';
 import { StageTimeline } from './components/StageTimeline';
@@ -9,7 +10,7 @@ import type { SessionPayload, User, VideoJob } from './lib/types';
 import './styles.css';
 
 type View = 'app' | 'admin' | 'detail';
-type AdminSection = 'tasks' | 'users' | 'settings';
+type AdminSection = 'dashboard' | 'tasks' | 'users' | 'settings';
 
 const initialView = (): View => (window.location.pathname.startsWith('/admin') ? 'admin' : 'app');
 const pathForView = (view: View) => (view === 'admin' ? '/admin' : '/');
@@ -24,6 +25,8 @@ function setBrowserPath(view: View) {
 }
 
 function AuthCard({ onSession }: { onSession: (payload: SessionPayload) => void }) {
+  const [mode, setMode] = useState<'login' | 'register'>('login');
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -31,23 +34,26 @@ function AuthCard({ onSession }: { onSession: (payload: SessionPayload) => void 
   async function submit() {
     setError('');
     try {
-      const payload = await api.login(email, password);
+      const payload = mode === 'login' ? await api.login(email, password) : await api.register(name, email, password);
       setToken(payload.token);
       onSession(payload);
     } catch (err) {
-      setError(err instanceof Error ? err.message : '登录失败');
+      setError(err instanceof Error ? err.message : mode === 'login' ? '登录失败' : '注册失败');
     }
   }
 
   return (
     <div className="auth-card card">
       <p className="eyebrow">安全访问</p>
-      <h2>登录账号</h2>
+      <h2>{mode === 'login' ? '登录账号' : '注册账号'}</h2>
+      {mode === 'register' && <input value={name} onChange={(event) => setName(event.target.value)} placeholder="昵称" />}
       <input value={email} onChange={(event) => setEmail(event.target.value)} placeholder="邮箱" />
-      <input value={password} onChange={(event) => setPassword(event.target.value)} placeholder="密码" type="password" />
+      <input value={password} onChange={(event) => setPassword(event.target.value)} placeholder="密码（至少 6 位）" type="password" />
       {error && <p className="form-error">{error}</p>}
-      <button onClick={submit}>登录</button>
-      <p className="hint">账号注册已关闭，请联系管理员开通账号。</p>
+      <button onClick={submit}>{mode === 'login' ? '登录' : '注册并登录'}</button>
+      <button className="link-button" onClick={() => setMode(mode === 'login' ? 'register' : 'login')}>
+        {mode === 'login' ? '没有账号？立即注册' : '已有账号？返回登录'}
+      </button>
     </div>
   );
 }
@@ -70,12 +76,12 @@ function ownerName(users: User[], job: VideoJob) {
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [view, setViewState] = useState<View>(initialView);
-  const [adminSection, setAdminSection] = useState<AdminSection>('tasks');
+  const [adminSection, setAdminSection] = useState<AdminSection>('dashboard');
   const [jobs, setJobs] = useState<VideoJob[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [detailReturnView, setDetailReturnView] = useState<'app' | 'admin'>('app');
-  const [stats, setStats] = useState<{ users: number; jobs: number; completed: number; processing: number } | null>(null);
+  const [stats, setStats] = useState<{ users: number; disabledUsers: number; jobs: number; completed: number; processing: number; failed: number; providerConfigured: boolean } | null>(null);
   const [actionError, setActionError] = useState('');
 
   const selectedJob = useMemo(() => jobs.find((job) => job.id === selectedJobId) ?? jobs[0], [jobs, selectedJobId]);
@@ -109,7 +115,7 @@ export default function App() {
         setUser(current);
         refresh(current.role === 'admin' && view === 'admin' ? 'all' : undefined).catch(() => undefined);
       })
-      .catch(() => clearToken());
+      .catch(() => { clearToken(); setUser(null); });
   }, [view]);
 
   useEffect(() => {
@@ -153,6 +159,19 @@ export default function App() {
     return Boolean(user && job.userId === user.id);
   }
 
+  async function toggleUserDisabled(item: User) {
+    setActionError('');
+    try {
+      const { user: updated } = await api.setUserDisabled(item.id, !item.disabled);
+      setUsers((current) => current.map((user) => (user.id === updated.id ? updated : user)));
+      if (stats) setStats((await api.stats()).stats);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : '用户状态更新失败');
+    }
+  }
+
+  const recentJobs = jobs.slice(0, 5);
+
   return (
     <div className="app-shell">
       <header className="topbar">
@@ -162,7 +181,7 @@ export default function App() {
           {user?.role === 'admin' && <button onClick={() => setView('admin')}>后台</button>}
         </nav>
         <div className="user-box">
-          {user ? <><UserRound size={18} />{user.name}<button onClick={logout}><LogOut size={16} /></button></> : <button onClick={() => setView('app')}>登录</button>}
+          {user ? <><UserRound size={18} />{user.name}<button title="修改密码" onClick={() => { setView('app'); window.setTimeout(() => document.getElementById('password-settings')?.scrollIntoView({ behavior: 'smooth' }), 0); }}><KeyRound size={16} /></button><button onClick={logout}><LogOut size={16} /></button></> : <button onClick={() => setView('app')}>登录</button>}
         </div>
       </header>
 
@@ -188,6 +207,7 @@ export default function App() {
             {selectedJob ? <StageTimeline job={selectedJob} /> : <EmptyWorkbench />}
           </section>
           {selectedJob?.status === 'complete' && <button className="detail-button" onClick={() => openDetail(selectedJob)}>查看结果 <ArrowRight size={18} /></button>}
+          <div id="password-settings"><PasswordSettings /></div>
         </main>
       )}
 
@@ -198,24 +218,45 @@ export default function App() {
         <main className="admin-shell">
           <aside className="admin-sidebar card">
             <div className="admin-brand"><ShieldCheck />管理端</div>
-            <button className={adminSection === 'tasks' ? 'active' : ''} onClick={() => setAdminSection('tasks')}><LayoutDashboard size={18} />任务管理</button>
+            <button className={adminSection === 'dashboard' ? 'active' : ''} onClick={() => setAdminSection('dashboard')}><LayoutDashboard size={18} />仪表盘</button>
+            <button className={adminSection === 'tasks' ? 'active' : ''} onClick={() => setAdminSection('tasks')}><PlayCircle size={18} />任务管理</button>
             <button className={adminSection === 'users' ? 'active' : ''} onClick={() => setAdminSection('users')}><Users size={18} />用户管理</button>
             <button className={adminSection === 'settings' ? 'active' : ''} onClick={() => setAdminSection('settings')}><Settings size={18} />模型配置</button>
           </aside>
           <section className="admin-content">
             <section className="admin-hero card">
-              <div><p className="eyebrow">后台管理</p><h2>{adminSection === 'tasks' ? '任务管理' : adminSection === 'users' ? '用户管理' : '模型配置'}</h2></div>
+              <div><p className="eyebrow">后台管理</p><h2>{adminSection === 'dashboard' ? '仪表盘' : adminSection === 'tasks' ? '任务管理' : adminSection === 'users' ? '用户管理' : '模型配置'}</h2></div>
               {user.role !== 'admin' && <p className="form-error">当前账号无后台权限。</p>}
             </section>
             {user.role === 'admin' && stats && <section className="stats-grid">
-              <div className="stat card"><ShieldCheck />用户<b>{stats.users}</b></div>
-              <div className="stat card"><LayoutDashboard />任务<b>{stats.jobs}</b></div>
-              <div className="stat card">完成<b>{stats.completed}</b></div>
-              <div className="stat card">处理中<b>{stats.processing}</b></div>
+              <div className="stat card"><ShieldCheck />用户<b>{stats.users}</b><span>禁用 {stats.disabledUsers}</span></div>
+              <div className="stat card"><LayoutDashboard />任务<b>{stats.jobs}</b><span>失败 {stats.failed}</span></div>
+              <div className="stat card">完成<b>{stats.completed}</b><span>处理中 {stats.processing}</span></div>
+              <div className="stat card">Provider<b>{stats.providerConfigured ? '已配' : '未配'}</b><span>本地 Whisper</span></div>
             </section>}
             {actionError && <p className="form-error">{actionError}</p>}
 
-            {user.role === 'admin' && adminSection === 'settings' && <ProviderSettings />}
+            {user.role === 'admin' && adminSection === 'dashboard' && stats && <section className="dashboard-grid">
+              <div className="card dashboard-card">
+                <h3>处理漏斗</h3>
+                <p>处理中：{stats.processing}</p>
+                <p>完成：{stats.completed}</p>
+                <p>失败：{stats.failed}</p>
+              </div>
+              <div className="card dashboard-card">
+                <h3>系统状态</h3>
+                <p>Provider：{stats.providerConfigured ? '已配置' : '未配置'}</p>
+                <p>语音识别：本地 Whisper</p>
+                <p>注册入口：已开放</p>
+              </div>
+              <div className="card dashboard-card wide">
+                <h3>最近任务</h3>
+                {recentJobs.length === 0 && <p className="muted">暂无任务。</p>}
+                {recentJobs.map((job) => <p className="line" key={job.id}><b>{safeTitle(job)}</b>{job.status} · {job.progress}%</p>)}
+              </div>
+            </section>}
+
+            {user.role === 'admin' && adminSection === 'settings' && <><ProviderSettings /><PasswordSettings /></>}
 
             {user.role === 'admin' && adminSection === 'users' && <section className="card admin-table">
               <h3><Users size={18} />用户列表</h3>
@@ -224,8 +265,9 @@ export default function App() {
                 return (
                   <div className="table-row user-row" key={item.id}>
                     <div><b>{item.name}</b><small>{item.email}</small></div>
-                    <span className="muted">{item.role === 'admin' ? '管理员' : '用户'}</span>
+                    <span className="muted">{item.role === 'admin' ? '管理员' : item.disabled ? '已禁用' : '用户'}</span>
                     <span className="muted">任务 {ownedJobs.length} · 完成 {ownedJobs.filter((job) => job.status === 'complete').length}</span>
+                    <button className="mini-button" onClick={() => toggleUserDisabled(item)} disabled={item.role === 'admin'}>{item.disabled ? <CheckCircle2 size={15} /> : <Ban size={15} />}{item.disabled ? '恢复' : '禁用'}</button>
                   </div>
                 );
               })}

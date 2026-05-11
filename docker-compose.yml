@@ -2,7 +2,7 @@ services:
   videoflow:
     build: .
     ports:
-      - "8787:8787"
+      - "8082:8787"
     environment:
       NODE_ENV: production
       PORT: 8787
@@ -11,9 +11,10 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://api.openai.com/v1}
       OPENAI_SCRIPT_MODEL: ${OPENAI_SCRIPT_MODEL:-gpt-4.1}
-      OPENAI_TRANSCRIBE_MODEL: ${OPENAI_TRANSCRIBE_MODEL:-gpt-4o-transcribe}
       VIDEOFLOW_MAX_AI_FRAMES: ${VIDEOFLOW_MAX_AI_FRAMES:-8}
-      VIDEOFLOW_ALLOW_REGISTRATION: ${VIDEOFLOW_ALLOW_REGISTRATION:-false}
+      VIDEOFLOW_WHISPER_MODEL: ${VIDEOFLOW_WHISPER_MODEL:-base}
+      VIDEOFLOW_WHISPER_LANGUAGE: ${VIDEOFLOW_WHISPER_LANGUAGE:-zh}
+      VIDEOFLOW_ALLOW_REGISTRATION: ${VIDEOFLOW_ALLOW_REGISTRATION:-true}
     volumes:
       - videoflow-data:/app/server/data
       - videoflow-uploads:/app/server/uploads

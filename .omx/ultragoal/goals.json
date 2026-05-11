@@ -1,24 +1,57 @@
 {
   "version": 1,
-  "createdAt": "2026-05-11T07:33:59.251Z",
-  "updatedAt": "2026-05-11T07:46:40.419Z",
+  "createdAt": "2026-05-11T09:07:22.722Z",
+  "updatedAt": "2026-05-11T09:51:12.859Z",
   "briefPath": ".omx/ultragoal/brief.md",
   "goalsPath": ".omx/ultragoal/goals.json",
   "ledgerPath": ".omx/ultragoal/ledger.jsonl",
   "codexGoalMode": "aggregate",
   "goals": [
     {
-      "id": "G001-videoflow-provider-base-url-html",
-      "title": "优化 VideoFlow：关闭账号注册入口/后台注册能力；修复 Provider base_url 配错导致上传任务出现 HTML 响应...",
-      "objective": "优化 VideoFlow：关闭账号注册入口/后台注册能力；修复 Provider base_url 配错导致上传任务出现 HTML 响应 in-operator 报错，给出生产可读错误；后台任务列表显示视频链接/下载、避免文件名乱码、可打开结果详情；默认进入工作台，后台仅通过 /admin 或管理员入口访问；增加任务删除功能并清理任务数据/文件。完成测试、构建、提交并推送。",
+      "id": "G001-c-c",
+      "title": "开放 C 端用户注册功能；管理员可以禁止/恢复某个 C 端用户登录；增加用户修改密码入口。",
+      "objective": "开放 C 端用户注册功能；管理员可以禁止/恢复某个 C 端用户登录；增加用户修改密码入口。",
       "status": "complete",
       "attempt": 1,
-      "createdAt": "2026-05-11T07:33:59.251Z",
-      "updatedAt": "2026-05-11T07:46:40.419Z",
-      "startedAt": "2026-05-11T07:33:59.457Z",
-      "completedAt": "2026-05-11T07:46:40.419Z",
-      "evidence": "Implemented registration gate, workbench-first routing with /admin admin entry, provider HTML/API-root friendly errors, admin video download/detail/delete controls, job deletion cleanup. Verified npm run lint; npm test; npm run build. Committed and pushed main commit 88a07dc."
+      "createdAt": "2026-05-11T09:07:22.722Z",
+      "updatedAt": "2026-05-11T09:51:11.941Z",
+      "startedAt": "2026-05-11T09:07:23.042Z",
+      "completedAt": "2026-05-11T09:51:11.941Z",
+      "evidence": "Implemented C-end registration, login rejection for disabled users, admin disable/restore endpoint/UI, and authenticated password change UI/API. Verified npm test, build, lint."
+    },
+    {
+      "id": "G002-provider",
+      "title": "后台界面更清晰，增加仪表盘/总览，让任务、用户、Provider、处理状态更直观。",
+      "objective": "后台界面更清晰，增加仪表盘/总览，让任务、用户、Provider、处理状态更直观。",
+      "status": "complete",
+      "attempt": 0,
+      "createdAt": "2026-05-11T09:07:22.722Z",
+      "updatedAt": "2026-05-11T09:51:12.256Z",
+      "completedAt": "2026-05-11T09:51:12.256Z",
+      "evidence": "Implemented admin dashboard section with stats cards, processing funnel, provider status, registration status, recent jobs, clearer sidebar navigation. Verified npm test, build, lint."
+    },
+    {
+      "id": "G003-tab",
+      "title": "处理过程中产生的分镜文件、图片、音频等素材要能在页面展示。详情页可以改成菜单或 tab，查看剧本、图片、分镜、音频等。",
+      "objective": "处理过程中产生的分镜文件、图片、音频等素材要能在页面展示。详情页可以改成菜单或 tab，查看剧本、图片、分镜、音频等。",
+      "status": "complete",
+      "attempt": 0,
+      "createdAt": "2026-05-11T09:07:22.722Z",
+      "updatedAt": "2026-05-11T09:51:12.536Z",
+      "completedAt": "2026-05-11T09:51:12.536Z",
+      "evidence": "Implemented detail tabs for full script, storyboard, imitation prompt, frames/images, and audio. Added artifact scanning API and /outputs static serving. Verified npm test, build, lint."
+    },
+    {
+      "id": "G004-docker-ssh-aliyun-8082",
+      "title": "项目打包成 Docker 镜像，使用国内源；通过 ssh aliyun 登录部署到服务器，对外端口 8082。",
+      "objective": "项目打包成 Docker 镜像，使用国内源；通过 ssh aliyun 登录部署到服务器，对外端口 8082。",
+      "status": "complete",
+      "attempt": 0,
+      "createdAt": "2026-05-11T09:07:22.722Z",
+      "updatedAt": "2026-05-11T09:51:12.859Z",
+      "completedAt": "2026-05-11T09:51:12.859Z",
+      "evidence": "Dockerfile uses npmmirror, Aliyun apt mirrors, installs ffmpeg/python/CPU torch/openai-whisper. docker compose maps 8082:8787. Deployed via ssh aliyun to /opt/videoflow; health http://127.0.0.1:8082/api/health returned ok and container has whisper+torch."
     }
   ],
-  "codexObjective": "Complete all ultragoal stories in .omx/ultragoal/goals.json: G001-videoflow-provider-base-url-html 优化 VideoFlow：关闭账号注册入口/后台注册能力；修复 Provider base_url 配错导致上传任务出现 HTML 响应..."
+  "codexObjective": "Complete all ultragoal stories in .omx/ultragoal/goals.json: G001-c-c 开放 C 端用户注册功能；管理员可以禁止/恢复某个 C 端用户登录；增加用户修改密码入口。; G002-provider 后台界面更清晰，增加仪表盘/总览，让任务、用户、Provider、处理状态更直观。; G003-tab 处理过程中产生的分镜文件、图片、音频等素材要能在页面展示。详情页可以改成菜单或 tab，查看剧本、图片、分镜、音频等。; G004-docker-ssh-aliyun-8082 项目打包成 Docker 镜像，使用国内源；通过 ssh aliyun 登录部署到服务器，对外端口 8082。"
 }

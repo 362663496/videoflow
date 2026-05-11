@@ -8,7 +8,6 @@ const emptyProvider: AiProviderInput = {
   baseUrl: 'https://api.openai.com/v1',
   apiKey: '',
   scriptModel: 'gpt-4.1',
-  transcribeModel: '',
   enabled: true
 };
 
@@ -29,7 +28,6 @@ export function ProviderSettings() {
         baseUrl: provider.baseUrl,
         apiKey: '',
         scriptModel: provider.scriptModel,
-        transcribeModel: provider.transcribeModel,
         enabled: provider.enabled
       });
     }).catch(() => undefined);
@@ -66,10 +64,9 @@ export function ProviderSettings() {
         <label>Base URL<input value={form.baseUrl} onChange={(event) => update('baseUrl', event.target.value)} placeholder="https://api.openai.com/v1" /></label>
         <label>API Key<input value={form.apiKey} onChange={(event) => update('apiKey', event.target.value)} placeholder={maskedKey || '输入 API Key'} type="password" /></label>
         <label>脚本模型<input value={form.scriptModel} onChange={(event) => update('scriptModel', event.target.value)} /></label>
-        <label>转写模型<input value={form.transcribeModel} onChange={(event) => update('transcribeModel', event.target.value)} placeholder="可留空；只有 whisper 或 *transcribe 模型才调用音频转写接口" /></label>
         <label className="check-row"><input checked={form.enabled} onChange={(event) => update('enabled', event.target.checked)} type="checkbox" />启用</label>
       </div>
-      <p className="hint">如果中转站只支持 /chat/completions，可把转写模型留空，系统会跳过音频转写并使用画面帧与元数据生成结果。</p>
+      <p className="hint">语音识别固定使用服务器本地 Whisper；AI Provider 只用于画面/文本分析和对 Whisper 原始转写做语境校正。</p>
       {message && <p className="success-text">{message}</p>}
       {error && <p className="form-error">{error}</p>}
       <button className="detail-button" onClick={submit} disabled={saving}><Save size={18} />{saving ? '保存中...' : '保存 Provider'}</button>
