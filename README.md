@@ -23,7 +23,7 @@ VIDEOFLOW_ADMIN_PASSWORD=your-secure-password
 OPENAI_API_KEY=sk-...
 OPENAI_BASE_URL=https://api.openai.com/v1
 OPENAI_SCRIPT_MODEL=gpt-4.1
-OPENAI_TRANSCRIBE_MODEL=gpt-4o-transcribe
+OPENAI_TRANSCRIBE_MODEL=
 VIDEOFLOW_ALLOW_REGISTRATION=false
 ```
 
@@ -33,7 +33,7 @@ VIDEOFLOW_ALLOW_REGISTRATION=false
 - Base URL，例如官方地址或第三方 OpenAI 兼容中转站。第三方 New API/中转站通常要填写 OpenAI 兼容接口地址（常见为 `https://域名/v1`），不要填写控制台网页首页。
 - API Key
 - 脚本生成模型
-- 转写模型
+- 转写模型：可留空；只有 `whisper*` 或包含 `transcribe` 的模型名才会调用 `/audio/transcriptions`。多数第三方中转站只支持聊天接口时建议留空。
 - 启用状态
 
 ## Local run

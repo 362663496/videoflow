@@ -140,6 +140,9 @@ export const store = {
     const user = userId ? db.users.find((item) => item.id === userId) : undefined;
     return user ? publicUser(user) : undefined;
   },
+  listUsers() {
+    return readDb().users.map(publicUser);
+  },
   listJobs(userId?: string) {
     const jobs = readDb().jobs;
     return userId ? jobs.filter((job) => job.userId === userId) : jobs;
@@ -190,7 +193,6 @@ export const store = {
     };
     if (!provider.apiKey) throw new Error('api_key 不能为空');
     if (!provider.scriptModel) throw new Error('脚本模型不能为空');
-    if (!provider.transcribeModel) throw new Error('转写模型不能为空');
     db.providers = [provider];
     writeDb(db);
     return publicProvider(provider);

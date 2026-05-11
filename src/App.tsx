@@ -1,4 +1,4 @@
-import { ArrowRight, Clapperboard, Download, Eye, LayoutDashboard, LogOut, PlayCircle, ShieldCheck, Trash2, UserRound } from 'lucide-react';
+import { ArrowRight, Clapperboard, Download, Eye, LayoutDashboard, LogOut, PlayCircle, Settings, ShieldCheck, Trash2, UserRound, Users } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { ProviderSettings } from './components/ProviderSettings';
 import { ResultDetail } from './components/ResultDetail';
@@ -9,6 +9,7 @@ import type { SessionPayload, User, VideoJob } from './lib/types';
 import './styles.css';
 
 type View = 'app' | 'admin' | 'detail';
+type AdminSection = 'tasks' | 'users' | 'settings';
 
 const initialView = (): View => (window.location.pathname.startsWith('/admin') ? 'admin' : 'app');
 const pathForView = (view: View) => (view === 'admin' ? '/admin' : '/');
@@ -61,10 +62,17 @@ function EmptyWorkbench() {
   );
 }
 
+function ownerName(users: User[], job: VideoJob) {
+  const owner = users.find((item) => item.id === job.userId);
+  return owner ? `${owner.name} · ${owner.email}` : job.userId;
+}
+
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [view, setViewState] = useState<View>(initialView);
+  const [adminSection, setAdminSection] = useState<AdminSection>('tasks');
   const [jobs, setJobs] = useState<VideoJob[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [detailReturnView, setDetailReturnView] = useState<'app' | 'admin'>('app');
   const [stats, setStats] = useState<{ users: number; jobs: number; completed: number; processing: number } | null>(null);
@@ -81,7 +89,11 @@ export default function App() {
     if (!getToken()) return;
     const { jobs: nextJobs } = await api.listJobs(scope);
     setJobs(nextJobs);
-    if (scope === 'all') setStats((await api.stats()).stats);
+    if (scope === 'all') {
+      const [{ stats: nextStats }, { users: nextUsers }] = await Promise.all([api.stats(), api.listUsers()]);
+      setStats(nextStats);
+      setUsers(nextUsers);
+    }
   }
 
   useEffect(() => {
@@ -111,6 +123,7 @@ export default function App() {
     clearToken();
     setUser(null);
     setJobs([]);
+    setUsers([]);
     setSelectedJobId(null);
     setStats(null);
     setView('app');
@@ -134,6 +147,10 @@ export default function App() {
     setSelectedJobId(job.id);
     setDetailReturnView(view === 'admin' ? 'admin' : 'app');
     setView('detail');
+  }
+
+  function canDelete(job: VideoJob) {
+    return Boolean(user && job.userId === user.id);
   }
 
   return (
@@ -178,34 +195,58 @@ export default function App() {
 
       {view === 'admin' && !user && <main className="center"><AuthCard onSession={(payload) => { setUser(payload.user); setView('admin'); refresh('all').catch(() => undefined); }} /></main>}
       {view === 'admin' && user && (
-        <main className="workspace">
-          <section className="admin-hero card">
-            <div><p className="eyebrow">后台管理</p><h2>任务队列与平台概览</h2></div>
-            {user.role !== 'admin' && <p className="form-error">当前账号无后台权限。</p>}
-          </section>
-          {user.role === 'admin' && stats && <section className="stats-grid">
-            <div className="stat card"><ShieldCheck />用户<b>{stats.users}</b></div>
-            <div className="stat card"><LayoutDashboard />任务<b>{stats.jobs}</b></div>
-            <div className="stat card">完成<b>{stats.completed}</b></div>
-            <div className="stat card">处理中<b>{stats.processing}</b></div>
-          </section>}
-          {user.role === 'admin' && <ProviderSettings />}
-          {actionError && <p className="form-error">{actionError}</p>}
-          {user.role === 'admin' && <section className="card admin-table">
-            <h3>最近任务</h3>
-            {jobs.length === 0 && <p className="muted">暂无任务。</p>}
-            {jobs.map((job) => (
-              <div className="table-row" key={job.id}>
-                <div><b>{safeTitle(job)}</b><small>{new Date(job.createdAt).toLocaleString()}</small></div>
-                <span className="muted">{job.status} · {job.progress}%</span>
-                <div className="table-actions">
-                  {job.fileUrl && <a className="mini-button" href={job.fileUrl} download><Download size={15} />视频</a>}
-                  <button className="mini-button" onClick={() => openDetail(job)} disabled={!job.result}><Eye size={15} />详情</button>
-                  <button className="mini-button danger" onClick={() => deleteJob(job)}><Trash2 size={15} />删除</button>
+        <main className="admin-shell">
+          <aside className="admin-sidebar card">
+            <div className="admin-brand"><ShieldCheck />管理端</div>
+            <button className={adminSection === 'tasks' ? 'active' : ''} onClick={() => setAdminSection('tasks')}><LayoutDashboard size={18} />任务管理</button>
+            <button className={adminSection === 'users' ? 'active' : ''} onClick={() => setAdminSection('users')}><Users size={18} />用户管理</button>
+            <button className={adminSection === 'settings' ? 'active' : ''} onClick={() => setAdminSection('settings')}><Settings size={18} />模型配置</button>
+          </aside>
+          <section className="admin-content">
+            <section className="admin-hero card">
+              <div><p className="eyebrow">后台管理</p><h2>{adminSection === 'tasks' ? '任务管理' : adminSection === 'users' ? '用户管理' : '模型配置'}</h2></div>
+              {user.role !== 'admin' && <p className="form-error">当前账号无后台权限。</p>}
+            </section>
+            {user.role === 'admin' && stats && <section className="stats-grid">
+              <div className="stat card"><ShieldCheck />用户<b>{stats.users}</b></div>
+              <div className="stat card"><LayoutDashboard />任务<b>{stats.jobs}</b></div>
+              <div className="stat card">完成<b>{stats.completed}</b></div>
+              <div className="stat card">处理中<b>{stats.processing}</b></div>
+            </section>}
+            {actionError && <p className="form-error">{actionError}</p>}
+
+            {user.role === 'admin' && adminSection === 'settings' && <ProviderSettings />}
+
+            {user.role === 'admin' && adminSection === 'users' && <section className="card admin-table">
+              <h3><Users size={18} />用户列表</h3>
+              {users.map((item) => {
+                const ownedJobs = jobs.filter((job) => job.userId === item.id);
+                return (
+                  <div className="table-row user-row" key={item.id}>
+                    <div><b>{item.name}</b><small>{item.email}</small></div>
+                    <span className="muted">{item.role === 'admin' ? '管理员' : '用户'}</span>
+                    <span className="muted">任务 {ownedJobs.length} · 完成 {ownedJobs.filter((job) => job.status === 'complete').length}</span>
+                  </div>
+                );
+              })}
+            </section>}
+
+            {user.role === 'admin' && adminSection === 'tasks' && <section className="card admin-table">
+              <h3>全部任务</h3>
+              {jobs.length === 0 && <p className="muted">暂无任务。</p>}
+              {jobs.map((job) => (
+                <div className="table-row" key={job.id}>
+                  <div><b>{safeTitle(job)}</b><small>{ownerName(users, job)}</small></div>
+                  <span className="muted">{job.status} · {job.progress}%</span>
+                  <div className="table-actions">
+                    {job.fileUrl && <a className="mini-button" href={job.fileUrl} download><Download size={15} />视频</a>}
+                    <button className="mini-button" onClick={() => openDetail(job)} disabled={!job.result}><Eye size={15} />详情</button>
+                    {canDelete(job) ? <button className="mini-button danger" onClick={() => deleteJob(job)}><Trash2 size={15} />删除</button> : <span className="readonly-badge">只读</span>}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </section>}
+              ))}
+            </section>}
+          </section>
         </main>
       )}
     </div>

@@ -121,3 +121,16 @@ input:focus { border-color: #ff315f; box-shadow: 0 0 0 4px rgba(255, 49, 95, .1)
   .table-row { grid-template-columns: 1fr; }
   .table-actions { justify-content: flex-start; }
 }
+.admin-shell { padding: 32px 5vw 80px; display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 24px; align-items: start; }
+.admin-sidebar { position: sticky; top: 92px; padding: 18px; display: grid; gap: 10px; }
+.admin-sidebar button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 13px 14px; border-radius: 18px; background: transparent; color: #714452; font-weight: 800; text-align: left; }
+.admin-sidebar button.active, .admin-sidebar button:hover { background: linear-gradient(135deg, rgba(255,49,95,.14), rgba(255,122,69,.12)); color: #d8204a; }
+.admin-brand { display: flex; align-items: center; gap: 10px; padding: 10px 12px 18px; color: #ff315f; font-size: 22px; font-weight: 900; }
+.admin-content { display: grid; gap: 22px; min-width: 0; }
+.user-row { grid-template-columns: minmax(0, 1fr) 120px 220px; }
+.readonly-badge { display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; background: #f7eef1; color: #8f6874; padding: 9px 12px; font-weight: 800; }
+@media (max-width: 900px) {
+  .admin-shell { grid-template-columns: 1fr; padding: 24px 6vw 70px; }
+  .admin-sidebar { position: static; }
+  .user-row { grid-template-columns: 1fr; }
+}

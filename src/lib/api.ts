@@ -67,6 +67,9 @@ export const api = {
   stats() {
     return request<{ stats: { users: number; jobs: number; completed: number; processing: number } }>('/api/admin/stats');
   },
+  listUsers() {
+    return request<{ users: User[] }>('/api/admin/users');
+  },
   listProviders() {
     return request<{ providers: AiProviderConfig[] }>('/api/admin/providers');
   },

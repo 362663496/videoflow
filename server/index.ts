@@ -61,7 +61,7 @@ const providerSchema = z.object({
   baseUrl: z.string().url(),
   apiKey: z.string().min(1),
   scriptModel: z.string().min(1),
-  transcribeModel: z.string().min(1),
+  transcribeModel: z.string(),
   enabled: z.boolean()
 });
 
@@ -129,7 +129,7 @@ app.delete('/api/jobs/:id', auth, (req, res) => {
   const jobId = String(req.params.id);
   const job = store.getJob(jobId);
   if (!job) return res.status(404).json({ error: '任务不存在' });
-  if (req.user!.role !== 'admin' && job.userId !== req.user!.id) return res.status(403).json({ error: '无权删除该任务' });
+  if (job.userId !== req.user!.id) return res.status(403).json({ error: '只能删除自己的任务' });
   const deleted = store.deleteJob(jobId);
   res.json({ job: deleted });
 });
@@ -154,6 +154,10 @@ app.post('/api/jobs/:id/retry', auth, adminOnly, (req, res) => {
 });
 
 app.get('/api/admin/stats', auth, adminOnly, (_req, res) => res.json({ stats: store.stats() }));
+
+app.get('/api/admin/users', auth, adminOnly, (_req, res) => {
+  res.json({ users: store.listUsers() });
+});
 
 app.get('/api/admin/providers', auth, adminOnly, (_req, res) => {
   res.json({ providers: store.listProviders() });

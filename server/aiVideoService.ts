@@ -127,12 +127,19 @@ async function prepareContext(sourcePath: string, jobId: string): Promise<Prepar
   };
 }
 
+
+function prefersOpenAiAudioTranscription(model: string) {
+  const normalized = model.toLowerCase();
+  return Boolean(model.trim()) && (normalized.includes('transcribe') || normalized.startsWith('whisper'));
+}
+
+
 async function transcribeAudio(client: OpenAI, transcribeModel: string, audioPath?: string) {
   if (!audioPath) return { text: '', segments: [] as Array<{ start?: number; end?: number; text?: string }> };
-  const model = transcribeModel;
+  if (!prefersOpenAiAudioTranscription(transcribeModel)) return { text: '', segments: [] as Array<{ start?: number; end?: number; text?: string }> };
   const response = await client.audio.transcriptions.create({
     file: createReadStream(audioPath),
-    model,
+    model: transcribeModel,
     response_format: 'verbose_json'
   } as never);
   const value = response as unknown as { text?: string; segments?: Array<{ start?: number; end?: number; text?: string }> };
@@ -201,7 +208,6 @@ function transcriptForPrompt(transcript: Awaited<ReturnType<typeof transcribeAud
 }
 
 async function analyzeVideo(client: OpenAI, scriptModel: string, title: string, context: PreparedContext, transcript: Awaited<ReturnType<typeof transcribeAudio>>) {
-  const model = scriptModel;
   const images = await frameContentItems(context.frames);
   const frameList = context.frames.map((frame) => `${frame.timestamp_seconds.toFixed(2)}s: ${path.basename(frame.path)}`).join('\n');
   const inputText = [
@@ -212,30 +218,46 @@ async function analyzeVideo(client: OpenAI, scriptModel: string, title: string, 
     '请基于视频证据生成生产可用的中文视频提词结果。必须区分可观察事实与不确定推断；听不清、看不清处写“听辨不确定”或“疑似”。',
     '输出必须包含完整剧本 Markdown、分镜剧本 Markdown、字幕线索、逐 Clip 信息、风格标签和必要假设。Markdown 文件结构对齐“完整剧本.md”和“分镜剧本.md”的专业交付标准。'
   ].join('\n\n');
-  const response = await client.responses.create({
-    model,
-    input: [
-      {
-        role: 'system',
-        content: [{ type: 'input_text', text: '你是专业中文短视频提词、分镜拆解与内容策略生成系统。只输出符合 schema 的真实分析结果，不输出调试说明。' }]
-      },
-      {
-        role: 'user',
-        content: [{ type: 'input_text', text: inputText }, ...images]
+  try {
+    const response = await client.responses.create({
+      model: scriptModel,
+      input: [
+        {
+          role: 'system',
+          content: [{ type: 'input_text', text: '你是专业中文短视频提词、分镜拆解与内容策略生成系统。只输出符合 schema 的真实分析结果，不输出调试说明。' }]
+        },
+        {
+          role: 'user',
+          content: [{ type: 'input_text', text: inputText }, ...images]
+        }
+      ],
+      text: {
+        format: {
+          type: 'json_schema',
+          name: 'video_script_result',
+          strict: true,
+          schema: responseSchema
+        }
       }
-    ],
-    text: {
-      format: {
-        type: 'json_schema',
-        name: 'video_script_result',
-        strict: true,
-        schema: responseSchema
-      }
-    }
-  } as never);
-  const outputText = (response as { output_text?: string }).output_text;
-  if (!outputText) throw new Error('AI 未返回可用结果');
-  return aiResultSchema.parse(JSON.parse(outputText));
+    } as never);
+    const outputText = (response as { output_text?: string }).output_text;
+    if (!outputText) throw new Error('AI 未返回可用结果');
+    return aiResultSchema.parse(JSON.parse(outputText));
+  } catch (error) {
+    const text = errorText(error).toLowerCase();
+    if (!text.includes('404') && !text.includes('not found')) throw error;
+    const fallback = await client.chat.completions.create({
+      model: scriptModel,
+      messages: [
+        { role: 'system', content: '你是专业中文短视频提词、分镜拆解与内容策略生成系统。只输出 JSON，不输出 Markdown 代码围栏。' },
+        { role: 'user', content: `${inputText}\n\n请输出 JSON，字段为 summary, styleTags, transcript, shots, fullScriptMarkdown, storyboardMarkdown, imitationMarkdown, assumptions。代表帧时间点请作为画面证据使用：${frameList}` }
+      ],
+      response_format: { type: 'json_object' }
+    } as never);
+    const outputText = fallback.choices[0]?.message?.content;
+    if (!outputText) throw new Error('AI 未返回可用结果', { cause: error });
+    return aiResultSchema.parse(JSON.parse(outputText));
+  }
 }
 
 async function persistArtifacts(outputDir: string, result: VideoResult) {
