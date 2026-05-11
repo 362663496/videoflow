@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.npm-cache/
+server/data/db.json
+server/uploads/*
+!server/uploads/.gitkeep
+server/outputs/
+.env
+.omx/logs/
+.omx/state/
+.omx/metrics.json
+.omx/notepad.md
+.omx/ultragoal/codex-goal-snapshot.json

@@ -1,0 +1,25 @@
+services:
+  videoflow:
+    build: .
+    ports:
+      - "8787:8787"
+    environment:
+      NODE_ENV: production
+      PORT: 8787
+      VIDEOFLOW_ADMIN_EMAIL: ${VIDEOFLOW_ADMIN_EMAIL:-admin@example.com}
+      VIDEOFLOW_ADMIN_PASSWORD: ${VIDEOFLOW_ADMIN_PASSWORD:-change-this-password}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://api.openai.com/v1}
+      OPENAI_SCRIPT_MODEL: ${OPENAI_SCRIPT_MODEL:-gpt-4.1}
+      OPENAI_TRANSCRIBE_MODEL: ${OPENAI_TRANSCRIBE_MODEL:-gpt-4o-transcribe}
+      VIDEOFLOW_MAX_AI_FRAMES: ${VIDEOFLOW_MAX_AI_FRAMES:-8}
+    volumes:
+      - videoflow-data:/app/server/data
+      - videoflow-uploads:/app/server/uploads
+      - videoflow-outputs:/app/server/outputs
+    restart: unless-stopped
+
+volumes:
+  videoflow-data:
+  videoflow-uploads:
+  videoflow-outputs:

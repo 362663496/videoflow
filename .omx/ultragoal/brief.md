@@ -1,0 +1,1 @@
+继续生产化 VideoFlow：1) 后台增加 AI Provider 配置能力，管理员可配置 provider 名称、base_url、api_key、脚本生成模型、转写模型、启用状态，支持第三方 OpenAI 兼容中转站；后端真实 AI 调用读取后台启用 provider 而不是只读环境变量。2) 做成 Docker 启动，包含 Dockerfile、docker-compose.yml、持久化 data/uploads/outputs、ffmpeg/python/node 运行环境和配置说明。3) 初始化 git 仓库，按 Lore Commit Protocol 提交，并推送到 git@github.com:362663496/videoflow.git。
